@@ -1,0 +1,267 @@
+---
+title: "MLA CIA1"
+author: "loksai 2028031"
+date: "29/07/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+data1<-read.csv("C:\\Users\\LOKSAI\\Downloads\\archive\\movies.csv", stringsAsFactor= TRUE)
+View(data1)
+str(data1)
+summary(data1)
+# Checking the presence of null values in whole dataset for data exploration
+# The below code says there are 0 null values
+sum(is.na(data1))
+
+```
+
+
+```{r}
+#problem statement
+#To estimate the generated gross revenue based on the few variables like budget, run time, score,genre, votes and year.
+
+#data cleaning
+#variable standardization for the selected set of variables. 
+
+data2<-data1[,c("Id", "gross", "budget", "runtime", "score", "votes", "genre", "year")]
+View(data2)
+str(data2)
+```
+
+
+```{r}
+# variable standardize has been done
+
+data2$gross<-scale(data2$gross)
+data2$budget<-scale(data2$budget)
+data2$runtime<-scale(data2$runtime)
+data2$score<-scale(data2$score)
+View(data2)
+```
+
+```{r}
+# Creating a correlation matrix for finding the relationship between all the data2 variables 
+
+data2_corr = cor(data2)
+data2_corr
+
+library(corrplot)
+# Plotting the correlation in graphical format
+corrplot(data2_corr)
+```
+```{r}
+# Analysing the variables
+library(ggplot2)
+# Analysing the  gross variables
+ggplot(data2, aes(data2$gross))+geom_histogram(binwidth = 0.5)
+# Analysing the budget variables
+ggplot(data2, aes(data2$budget))+geom_histogram(binwidth = 0.5)
+# Analysing the runtime variables
+ggplot(data2, aes(data2$runtime))+geom_histogram(binwidth = 0.5)
+# Analysing the score variables
+ggplot(data2, aes(data2$score))+geom_histogram(binwidth = 0.5)
+# Analysing the votes variables
+ggplot(data2, aes(data2$votes))+geom_bar(width = 500)
+# Analysing the genre variables
+ggplot(data2, aes(data2$genre))+geom_histogram(binwidth = 0.5)
+# Analysing the year variables
+ggplot(data2, aes(data2$year))+geom_bar(width = 0.2)
+
+```
+
+```{r}
+# Performing Multiple linear regression by considering Blood pressure as dependent variable
+# y = bo + b1x1 + b2x2 + b3x3 + b4x4 + b5x5 + b6x6
+
+library(caTools)
+set.seed(100)
+split1 = sample.split(data2$Id, SplitRatio = 0.7)
+split1
+summary(split1)
+
+datatrain = subset(data2, split1 == TRUE)
+datatest = subset(data2, split1 == FALSE)
+
+dim(datatrain)
+dim(datatest)
+
+summary(datatrain)
+```
+
+
+```{r}
+#Developing a linear regression model for the above dependent variable gross
+reg1 = lm(datatrain$gross~
+            datatrain$budget+
+            datatrain$runtime+
+            datatrain$score+
+            datatrain$votes+
+            datatrain$genre+
+            datatrain$year, data = datatrain)
+
+summary(reg1)
+# As p value < 0.05 we reject null hypothesis
+```
+
+
+```{r}
+# The coefficients of the variables are
+reg1$coefficients
+
+# Checking the normality of residuals
+# As the output is in the form of normal my variables for the problem statement is valid
+qqnorm(reg1$residuals)
+qqline(reg1$residuals)
+```
+
+```{r}
+
+# The below plot shows the visual implementation of multiple linear regression model
+# The below plot is also used to find the Outliers
+
+plot(reg1)
+boxplot(reg1$residuals)
+library(car)
+outlierTest(reg1)
+```
+
+
+```{r}
+# We are removing outliers 3268,3326,3343,5952,6118,3321,1353,6579,1221,1285 from the dataset for better results
+
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)
+
+firstrow<- datatrain %>%
+  slice(c(1:10))
+
+lasrrow<- datatrain %>%
+  slice(-c(1:10))
+```
+
+```{r}
+datatrain<- datatrain %>%
+  slice(-c(3268,3326,3343,5952,6118,3321,1353,6579,1221,1285))
+
+View(datatrain)
+#we have removed the outlliers for getting the better results.
+```
+
+```{r}
+
+reg2 = lm(datatrain$gross~
+            datatrain$budget+
+            datatrain$runtime+
+            datatrain$score+
+            datatrain$votes+
+            datatrain$genre+
+           datatrain$year, data = datatrain)
+
+summary(reg2)
+plot(reg2)
+
+library(car)
+outlierTest(reg2)
+influenceIndexPlot(reg2)
+```
+
+```{r}
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)
+
+firstrow<- datatrain %>%
+  slice(c(1:10))
+```
+
+```{r}
+lasrrow<- datatrain %>%
+  slice(-c(1:10))
+```
+
+```{r}
+datatrain<- datatrain %>%
+  slice(-c(2305,829,1204,2232,502,2106,821,907,4561,2208))
+View(datatrain)
+```
+
+
+```{r}
+reg3 = lm(datatrain$gross~
+            datatrain$budget+
+            datatrain$runtime+
+            datatrain$score+
+            datatrain$votes+
+            datatrain$genre+
+           datatrain$year, data = datatrain)
+summary(reg3)
+plot(reg3)
+
+library(car)
+outlierTest(reg3)
+```
+
+
+```{r}
+# test for normality
+# h0 = data is  normally distributed
+# h1 = data is not normally distributed
+# shapiro test is used to test normality
+shapiro.test(reg3$residuals)
+# As the p value < 0.05 we reject null hypothesis makind the model as not normally distributed
+
+# We can also data normality using scatter plot as shown below
+# The below plot is used ot check the randomness in the residuals
+plot(reg3$residuals, c(1:length(reg3$residuals)))
+```
+
+```{r}
+## Multi colinearity
+# If there is more common varience (common elements) then there will be less proper output
+# For doing this multicolinearity we need to install CAR library
+library(car)
+vif(reg3)
+# This is known as Varience inflation factor, this says how much x1 is sharing common varience with all other variables. It should be as low as possible
+# If vif is < 2.5 it is small model saying that there is no mmulti colinearity problem or no problem
+# If vif is < 4 it is small model saying that there is no mmulti colinearity problem or no problem
+```
+
+```{r}
+# Checking the normality of error terms
+# error = actual - predicted
+# For checking normality we do shapiro test, qqnorm, boxplot, histogram
+reg3$coefficients
+qqnorm(reg3$residuals)
+qqline(reg3$residuals)
+boxplot(reg3$residuals)
+shapiro.test(reg3$residuals)
+# As p value < 0.05 the data is not normally distributed; Ho = normally distributed; H1: not normally distributed
+hist(reg3$residuals)
+```
+
+
+```{r}
+#The below code is used to compare between the the prediction between the trained data set and the tested dataset, the below values shows the relationship between the numbers as the first number being the trained number and the second number being the test number the amount of nearness gives the good fit for the data
+
+predict1 = predict(reg3,datatrain)
+predict1
+str(predict1)
+```
+
+```{r}
+# Calculating the R-squared value by using summary function
+
+summary(reg3)$r.squared
+
+## AIC and BIC are also penalized-likelihood criteria, as we all know. In a given Bayesian setup, BIC is an approximation of a function of the posterior likelihood of a model being valid, with a lower BIC indicating that a model is more likely to be the true model. This shows the output of the likelyness of the dataset as much low the dataset is the better the dataset
+AIC(reg3)
+BIC(reg3)
+
+#we need to use library(metrics) to find RMSE, AIC, BIC\
+library(Metrics) 
+rmse(predict1,datatrain$gross)
+# Here the RMSE Value is 0.61019 which is low indicates that the model is better fit
+```
+
